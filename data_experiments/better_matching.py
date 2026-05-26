@@ -6,28 +6,28 @@ huffman = Huffman(mode="rus", DEBUG=True)
 bit_to_char = {
     "00": "Х",
     "11": "П",
-    "01": "А",
-    "10": "К",
+    "01": "К",
+    "10": "А",
 
-    "11111": "В",
-    "11110": "Д",
-    "01111": "Ж",
-    "11100": "Э",
+    # "1111": "У",
+    # "1110": "Д",
+    # "1100": "Ж",
+    # "1000": "Э",
 
-    "00111": "Ъ",
-    "11000": "У",
-    "00011": "Е",
-    "00000": "И",
+    # "0001": "З",
+    # "0011": "В",
+    # "0010": "Р",
+    # "0000": "Е",
 
-    "11011": "Г",
-    "11001": "Р",
-    "10011": "М",
-    "10001": "Ш",
+    "00110": "У",
+    "00111": "Д",
+    "00011": "Ж",
+    "00011": "Э",
 
-    "10101": "Щ",
-    "01010": "О",
-    "10111": " ",
-    "11101": "Ы",
+    "11000": "З",
+    "11101": "В",
+    "00100": "Р",
+    "01001": "Е",
 }
 
 char_to_bit = {}
@@ -36,8 +36,10 @@ for key in bit_to_char:
         char_to_bit[value] = key
 
 repeat_rate = {
-    "неповторяются": 3,
-    " ": 4,
+    "И": (1, 2),
+    "Ы": (2, 1),
+    "С": (3, 1),
+    "М": (4, 1),
 }
 
 chunk = 5
@@ -69,36 +71,40 @@ def encode(bits: str, bit_to_char: dict = bit_to_char) -> str:
     return "".join(out)
 
 def encode_with_repeat_rate(text: str, repeat_rate: dict = repeat_rate):
-    if not text:
-        return ""
-
     out = []
     i = 0
 
+    # sort tokens by strongest compression first
+    rules = sorted(
+        repeat_rate.items(),
+        key=lambda x: x[1][0] * x[1][1],
+        reverse=True
+    )
+
     while i < len(text):
-        j = i
+        matched = False
 
-        # count run length
-        while j < len(text) and text[j] == text[i]:
-            j += 1
+        for token, (take, repeat) in rules:
+            total_len = take * (repeat + 1)
 
-        run_length = j - i
-        symbol = text[i]
+            if i + total_len > len(text):
+                continue
 
-        # find best repeat token
-        token = None
-        for k, v in repeat_rate.items():
-            if v == run_length:
-                token = k
+            chunk = text[i:i+take]
+
+            expected = chunk * (repeat + 1)
+
+            if text[i:i+total_len] == expected:
+                out.append(chunk)
+                out.append(token)
+
+                i += total_len
+                matched = True
                 break
 
-        if token:
-            out.append(symbol + token)
-        else:
-            # fallback: literal repetition
-            out.append(symbol * run_length)
-
-        i = j
+        if not matched:
+            out.append(text[i])
+            i += 1
 
     return "".join(out)
 
@@ -107,22 +113,23 @@ def decode(text: str) -> str:
 
 def decode_with_repeat_rate(text: str, repeat_rate: dict = repeat_rate):
     out = []
-    i = 0
 
-    # invert dictionary: token → repeat length
-    token_to_len = {k: v for k, v in repeat_rate.items()}
+    for c in text:
+        # repeat token
+        if c in repeat_rate:
+            take, repeat = repeat_rate[c]
 
-    while i < len(text):
-        c = text[i]
+            if len(out) < take:
+                raise ValueError(f"Not enough previous characters for {c}")
 
-        # check if next char is a repeat token
-        if i + 1 < len(text) and text[i + 1] in token_to_len:
-            repeat_count = token_to_len[text[i + 1]]
-            out.append(c * repeat_count)
-            i += 2
+            chunk = out[-take:]
+
+            for _ in range(repeat):
+                out.extend(chunk)
+
+        # normal character
         else:
             out.append(c)
-            i += 1
 
     return "".join(out)
 

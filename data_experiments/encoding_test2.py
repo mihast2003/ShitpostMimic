@@ -4,30 +4,20 @@ huffman = Huffman(mode="rus", DEBUG=True)
 
 
 bit_to_char = {
-    "00": "Х",
-    "11": "П",
-    "01": "А",
-    "10": "К",
+    "00": "В",
+    "11": "А",
+    "01": "П",
+    "10": "Х",
 
-    "11111": "В",
-    "11110": "Д",
-    "01111": "Ж",
-    "11100": "Э",
+    # "000": "В",
+    # "001": "Д",
+    # "010": "Р",
+    # "011": "Э",
 
-    "00111": "Ъ",
-    "11000": "У",
-    "00011": "Е",
-    "00000": "И",
-
-    "11011": "Г",
-    "11001": "Р",
-    "10011": "М",
-    "10001": "Ш",
-
-    "10101": "Щ",
-    "01010": "О",
-    "10111": " ",
-    "11101": "Ы",
+    # "100": "Ъ",
+    # "101": "У",
+    # "110": "Е",
+    # "111": "И",
 }
 
 char_to_bit = {}
@@ -36,11 +26,11 @@ for key in bit_to_char:
         char_to_bit[value] = key
 
 repeat_rate = {
-    "неповторяются": 3,
-    " ": 4,
+    "К": 3,
+    "Ж": 4,
 }
 
-chunk = 5
+chunk = 3
 
 def encode(bits: str, bit_to_char: dict = bit_to_char) -> str:
     out = []
@@ -53,8 +43,11 @@ def encode(bits: str, bit_to_char: dict = bit_to_char) -> str:
             i += chunk
 
         # fallback to 2-bit
-        elif i <= len(bits):
-            if i+2 > len(bits):
+        elif i < len(bits):
+
+            # print(bits[i:])
+
+            if i+2 >= len(bits):
                 pad = (len(bits) - i) % 2
                 bits += "0" * pad
 
@@ -64,6 +57,7 @@ def encode(bits: str, bit_to_char: dict = bit_to_char) -> str:
             i += 2
 
         else:
+            rest = bits[i:]
             raise ValueError(f"No match at position {i}")
 
     return "".join(out)
