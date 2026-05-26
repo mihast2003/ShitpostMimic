@@ -188,7 +188,7 @@ class Huffman:
             print("\nEncoded length:", len(encoded))
             encoded_with_spaces = ' '.join(self.codes[char] for char in text.lower()) 
             print(encoded_with_spaces)
-            print(f"Bits per symbol: {len(encoded.replace(' ', ''))/len(text)} \nSize reduced to: {(len(encoded.replace(' ', ''))/len(text))/8*100} %")
+            print(f"Bits per symbol: {len(encoded.replace(' ', ''))/len(text)} \nSize reduced to: {(len(encoded.replace(' ', ''))/len(text))/8*100} %\n")
 
         return encoded
 
