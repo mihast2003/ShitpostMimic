@@ -144,7 +144,7 @@ class Huffman:
 
         self._generate_codes(self.root)
 
-        print("Codes:", self.codes)
+        # print("Codes:", self.codes)
 
     def _build_tree(self, frequencies):
         freq = frequencies
