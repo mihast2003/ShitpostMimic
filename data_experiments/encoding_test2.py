@@ -128,7 +128,7 @@ encoded = huffman.encode(input_text)
 # print(encoded)
 
 laugh_coded = encode(encoded)
-print(laugh_coded)
+print(f"Laugh coded length: {len(laugh_coded)} (Bits per symbol: {len(encoded)/len(laugh_coded)})\n{laugh_coded}")
 
 laugh_comp = encode_with_repeat_rate(laugh_coded)
 print(f"Laugh comp length: {len(laugh_comp)} (Bits per symbol: {len(encoded)/len(laugh_comp)})\n {laugh_comp}")
