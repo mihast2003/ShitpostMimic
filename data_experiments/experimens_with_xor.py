@@ -4,7 +4,7 @@ from run_length_encoder import Laugh_Encoder_RunLength
 huffman = Huffman(mode="rus", DEBUG=True)
 laugh_encoder = Laugh_Encoder_RunLength(DEBUG=True)
 
-input_text = "ну давай до связи"
+input_text = "закодируй-ка этот текст а если я его изменю что будет"
 
 encoded = huffman.encode(input_text)
 laugh_coded = laugh_encoder.encode(encoded)
