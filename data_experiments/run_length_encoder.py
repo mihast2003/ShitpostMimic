@@ -214,7 +214,7 @@ class Laugh_Encoder_RunLength():
     
 
     def simple_encode(self, input_binary: str, shift: int) -> str:
-        transformed = xor_shifter.xor_delta_encode(input_binary, shift)
+        transformed = xor_shifter.xor_shift_encode(input_binary, shift)
         laugh_coded = encode_laugh(transformed)
         laugh_optimised = laugh_coded.replace("ПППП","Э").replace("ППП","Ъ").replace("ПП","Е")
         laugh_comp = encode_with_repeat_rate(laugh_optimised)
@@ -232,7 +232,7 @@ class Laugh_Encoder_RunLength():
 
         shift = self.find_best_shift(input_binary)
 
-        transformed = xor_shifter.xor_delta_encode(input_binary, shift)
+        transformed = xor_shifter.xor_shift_encode(input_binary, shift)
         if self.debug:
             print(f"shift={shift}")
 
@@ -271,7 +271,7 @@ class Laugh_Encoder_RunLength():
         binary_output = laugh_decoded
 
         if shift:
-            binary_output = xor_shifter.xor_delta_decode(binary_output, shift)
+            binary_output = xor_shifter.xor_shift_decode(binary_output, shift)
             if self.debug:
                 print(f"shift={shift}")
 
