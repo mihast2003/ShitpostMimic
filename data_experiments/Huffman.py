@@ -66,7 +66,7 @@ russian_freq_old = {
 }
 
 russian_freq = {
-    ' ': 650,
+    ' ': 700,
 
     'о': 385, 
     'а': 304, 

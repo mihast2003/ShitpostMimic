@@ -2,7 +2,6 @@ import constriction
 import numpy as np
 from collections import Counter
 from collections import defaultdict
-import math
 
 # -------------------
 # Reference text (training data)
@@ -23,7 +22,7 @@ ref_text = """вот я использую русский язык чтобы к
 ну да странновато выглядит дана сказала что ей эстетически не нравится что кофе оставили настолько
 xd Я могу попробовать сделать более таймлапсное, типа чтоб карандаши кто-то подвигал, кофе налил, бумагу положил и написал что-то
 ну не знаю, не знаю попробуй Попробую А то оно неживое какое-то Тебе написать скрипт падения листика?
-Я делаю портфолио, собираю рефы концептиков персонажей и в свободное время кодю фигню Сижу с ума схожу uwu owo
+Я делаю портфолио, собираю рефы концептиков персонажей и в свободное время кодю фигню Сижу с ума схожу
 Это оказалось сложнее чем я думал Я домоооой Я значит сижу в паспортном эээ столе? Почемуто мне кажется оно так называется
 И тут штука которую мы печатали ":D Прикол Дап Я таво :,) Как мне себе верить Я андрею подписала 25 шт вешалок с вырезом А надо 10 было хддд Блэп Он хотябы порезать все не успел и я много с заказчика взяла :_3 Вот так вот Бывает, ниче страшного Мгм  В стемльках довольно чух Пока что по крайней мере
 А еще помнишь у меня шишка на ноге там где у мизинца у плюсневой кости бугорок такой Мы с подологом
@@ -38,8 +37,6 @@ xd Я могу попробовать сделать более таймлапс
 """
 
 ref_text = ref_text.lower()
-ref_text = " ".join(ref_text.splitlines())
-print(ref_text)
 
 counts = Counter(ref_text)
 print(counts)
@@ -57,101 +54,29 @@ ref_msg = np.array([char_to_id[c] for c in ref_text], dtype=np.int32)
 # Learn probabilities
 # -------------------
 counts = np.bincount(ref_msg, minlength=len(alphabet))
-global_probs = counts / counts.sum()
+probs = counts / counts.sum()
 
-global_model = constriction.stream.model.Categorical(global_probs.astype(np.float32), perfect = False) #type: ignore
+entropy_model = constriction.stream.model.Categorical(probs.astype(np.float32), perfect = False) #type: ignore
 
 # -------------------
 # Message to compress
 # -------------------
 text = "могу попробовать более длинный текст, что скажешь uwu так нечестно наверное но я не знаю как иначе"
 # text = text * 10
-text = text.lower()
 
-entropy = -np.sum(global_probs * np.log2(global_probs))
+entropy = -np.sum(probs * np.log2(probs))
 print(entropy)
 theoretical_bits = entropy * len(text)
 print("theoretical_bits:", theoretical_bits)
 
-# convert text to id
+text = text.lower()
 message = np.array([char_to_id[c] for c in text], dtype=np.int32)
-
-
-# -----------------------
-# 3. Build bigram counts
-# -----------------------
-num_symbols = len(alphabet)
-counts = np.zeros((num_symbols, num_symbols), dtype=np.int32)
-
-
-for prev, curr in zip(ref_msg[:-1], ref_msg[1:]):
-    if prev < 0 or curr < 0:
-        continue
-    if prev >= num_symbols or curr >= num_symbols:
-        continue
-    counts[prev, curr] += 1
-
-alpha = 1e-1
-
-probs = (counts + alpha) / (counts.sum(axis=1, keepdims=True) + alpha * num_symbols)
-# probs = counts / counts.sum(axis=1, keepdims=True)
-
-for i in range(num_symbols):
-    p = probs[i]
-    
-    print(
-        id_to_char[i],
-        "max:", np.max(p),
-        "min:", np.min(p),
-        "sum:", np.sum(p)
-    )
-
-probs_test = probs
-# for prev in range(num_symbols):
-#     probss = probs_test[prev]
-
-#     top = np.argsort(-probss)[:10]  # top 10 most likely next symbols
-
-#     print("\nPrev symbol:", id_to_char[prev])
-#     print("Top transitions:")
-    
-#     for j in top:
-#         print(f"  {id_to_char[j]}: {probss[j]:.3f}")
-
-# idx = char_to_id['ё']
-# print("row sum:", counts[idx].sum())
-# print("row:", counts[idx])
-# -----------------------
-# 5. Build per-context ANS models
-# -----------------------
-models = []
-
-for prev in range(num_symbols):
-    model = constriction.stream.model.Categorical(  #type: ignore
-        probs[prev].astype(np.float32),
-        perfect=False
-    )
-    models.append(model)
 
 # -------------------
 # Encode
 # -------------------
 encoder = constriction.stream.stack.AnsCoder() #type: ignore
-
-# Encode backwards (ANS requirement)
-
-# last symbol uses global model (no context)
-encoder.encode_reverse(message[-1], global_model)
-
-# remaining symbols
-for i in range(len(message) - 2, -1, -1):
-    if i == 0:
-        # first symbol has no previous context → fallback
-        encoder.encode_reverse(message[i], models[message[i]])
-    else:
-        prev = message[i + 1]
-        encoder.encode_reverse(message[i], models[prev])
-
+encoder.encode_reverse(message, entropy_model)
 
 compressed = encoder.get_compressed()
 
@@ -161,32 +86,17 @@ print("Compressed:\n", compressed)
 for x in compressed:
     print(f"{x:032b}")
 
-bits = 0
-for i in range(len(message)):
-    if i == 0:
-        p = global_probs[message[i]]
-    else:
-        p = probs[message[i-1], message[i]]
-
-    bits += -math.log2(p)
-
-print("bits CAN BE ", bits)
-
-byte_stream = np.asarray(compressed, dtype=np.uint32).tobytes()
-
-total_bits = len(byte_stream) * 8
+total_bits = len(compressed) * 32
 
 print("\nBinary length:", total_bits)
 # print([bin(x) for x in compressed])
 
-
-
 # # -------------------
 # # Decode
 # # -------------------
-# decoder = constriction.stream.stack.AnsCoder(compressed) #type: ignore
-# decoded = decoder.decode(entropy_model, len(message))
+decoder = constriction.stream.stack.AnsCoder(compressed) #type: ignore
+decoded = decoder.decode(entropy_model, len(message))
 
-# decoded_text = ''.join(id_to_char[i] for i in decoded)
+decoded_text = ''.join(id_to_char[i] for i in decoded)
 
-# print(decoded_text)
+print(decoded_text)
