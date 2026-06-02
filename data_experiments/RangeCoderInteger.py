@@ -23,6 +23,28 @@ class BitWriter:
 
     def get_bytes(self):
         return bytes(self.out)
+    
+class BitReader:
+    def __init__(self, data):
+        self.data = data
+        self.byte_pos = 0
+        self.bit_pos = 0  # 0–7
+
+    def read_bit(self):
+        if self.byte_pos >= len(self.data):
+            return 0  # or raise error if you prefer strict decoding
+
+        byte = self.data[self.byte_pos]
+
+        bit = (byte >> (7 - self.bit_pos)) & 1
+
+        self.bit_pos += 1
+
+        if self.bit_pos == 8:
+            self.bit_pos = 0
+            self.byte_pos += 1
+
+        return bit
 
 class EntropyAnalyser:
     def __init__(self) -> None:
@@ -65,22 +87,30 @@ class EntropyAnalyser:
 
 class RangeCoder:
     def __init__(self, txt):
-        EOF = "\x03"
+        EOF = "@"
         text = txt + EOF
+        # print("reference text is", text)
+
         self.symbols = sorted(set(text))
+
+        self.char_to_id = {c: i for i, c in enumerate(self.symbols)}
+        self.id_to_char = {i: c for c, i in self.char_to_id.items()}
+
+        self.N = len(self.symbols)
+
+        data = [self.char_to_id[c] for c in text]
+        self.ids = sorted(set(data))
 
         # =====================================================
         # 1. UNIGRAM COUNTS (ground truth)
         # =====================================================
-        self.uni_counts = Counter(text)
+        self.uni_counts = Counter(data)
         self.uni_total = sum(self.uni_counts.values())
-
-
 
         # unigram cumulative (for range coding)
         self.uni_cum = {}
         cum = 0
-        for s in self.symbols:
+        for s in self.ids:
             self.uni_cum[s] = cum
             cum += self.uni_counts[s]
 
@@ -89,18 +119,18 @@ class RangeCoder:
         # =====================================================
         self.bi_counts = defaultdict(Counter)
 
-        for a, b in zip(text[:-1], text[1:]):
+        for a, b in zip(data[:-1], data[1:]):
             self.bi_counts[a][b] += 1
 
         # ensure all contexts exist
-        for a in self.symbols:
+        for a in self.ids:
             _ = self.bi_counts[a]
 
         # =====================================================
         # 3. BIGRAM TOTALS
         # =====================================================
         self.bi_total = {}
-        for a in self.symbols:
+        for a in self.ids:
             self.bi_total[a] = sum(self.bi_counts[a].values())
 
         # =====================================================
@@ -108,25 +138,22 @@ class RangeCoder:
         # =====================================================
         self.bi_cum = {}
 
-        for a in self.symbols:
+        for a in self.ids:
             self.bi_cum[a] = {}
 
             cum = 0
-            for b in self.symbols:
+            for b in self.ids:
                 self.bi_cum[a][b] = cum
                 cum += self.bi_counts[a][b]
 
-        # =====================================================
-        # 5. ESCAPE MODEL (simple, stable version)
-        # =====================================================
-        self.escape = {
-            s: max(1, len(self.symbols) // 20)
-            for s in self.symbols
-        }
+        print(self.id_to_char, "\n") 
+        print(self.uni_counts, "\n") 
+        print(self.uni_cum, "\n") 
+        print(self.uni_total, "\n") 
 
         # print(self.uni_counts["\x03"])
-        print("EOF interval:", self.uni_cum["\x03"], self.uni_cum["\x03"] + self.uni_counts["\x03"])
-        print("space interval:", self.uni_cum[" "], self.uni_cum[" "] + self.uni_counts[" "])
+        # print("EOF interval:", self.uni_cum["\x03"], self.uni_cum["\x03"] + self.uni_counts["\x03"])
+        # print("space interval:", self.uni_cum[" "], self.uni_cum[" "] + self.uni_counts[" "])
         # print(self.bi_counts["э"])
         # print(self.bi_total)
         # print("\x03" in self.symbols)
@@ -246,7 +273,9 @@ class RangeCoder:
         return bw.get_bytes()
     
 
-    def decode(self, reader, max_symbols=10):
+    def decode(self, encoded):
+        reader = BitReader(encoded)
+        max_symbols = 10
         print("symbol 0 is ", ord(self.symbols[0]))
         low = 0
         high = 0xFFFFFFFF

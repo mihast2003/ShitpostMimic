@@ -1,4 +1,4 @@
-from RangeCoder import RangeCoder
+from RangeCoderInteger import RangeCoder
 
 class BitReader:
     def __init__(self, data):
@@ -56,15 +56,13 @@ ref_text = " ".join(ref_text.splitlines())
 
 rangeCoder = RangeCoder(ref_text)
 
-input_text = "неужели что как поч"
+input_text = "привет"
 # input_text = EOF * 10
 
-compressed = rangeCoder.encode(input_text)
-print(compressed)
-print(len(compressed) * 8, "bits")
+# compressed = rangeCoder.encode(input_text)
+# print(compressed)
+# print(len(compressed) * 8, "bits")
 
-reader = BitReader(compressed)
+# recovered = rangeCoder.decode(compressed)
 
-recovered = rangeCoder.decode(reader, 50)
-
-print(recovered)
+# print(recovered)
