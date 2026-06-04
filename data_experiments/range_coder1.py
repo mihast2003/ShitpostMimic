@@ -20,6 +20,7 @@ class BitReader:
             self.bit_pos = 0
             self.byte_pos += 1
 
+        print("Read bit:", bit)
         return bit
 
 ref_text = """вот я использую русский язык чтобы как дела привет я ни разу не использовал букву м например мороженое и можно пойти сделать что-то другое то у 
@@ -56,15 +57,19 @@ ref_text = " ".join(ref_text.splitlines())
 
 rangeCoder = RangeCoder(ref_text)
 
-input_text = "неужели что как поч"
+input_text = "млкз"
 # input_text = EOF * 10
 
 compressed = rangeCoder.encode(input_text)
 print(compressed)
 print(len(compressed) * 8, "bits")
 
+print("Binary is") 
+for b in compressed:
+    print(bin(b))
+
 reader = BitReader(compressed)
 
-recovered = rangeCoder.decode(reader, 50)
+recovered = rangeCoder.decode(reader, 20)
 
-print(recovered)
+print(f"recovered message \"{recovered}\"")

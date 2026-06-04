@@ -6,8 +6,10 @@ class BitWriter:
         self.buffer = 0
         self.nbits = 0
         self.out = bytearray()
+        self.string = 0
 
     def write_bit(self, bit):
+        self.string = (self.string << 1) | bit
         self.buffer = (self.buffer << 1) | bit
         self.nbits += 1
 
@@ -139,7 +141,7 @@ class RangeCoder:
         print("symbol 0 is ", ord(self.symbols[0]))
 
         EOF = "\x03"
-        text = txt + EOF*2
+        text = txt + EOF
 
         print("Text to encode", text)
 
@@ -200,13 +202,12 @@ class RangeCoder:
 
             r = high - low + 1
 
-            # print("encoder STEP", i, "prev:", prev, "ch:", ch, "ord:", ord(ch))
+            print("encoder STEP", i, "prev:", prev, " CHARACTER:", ch, " ord:", ord(ch))
 
             high = low + (r * sym_high // total) - 1
             low = low + (r * sym_low // total)
 
             while True:
-
                 if high < HALF:
 
                     output_bit(0)
@@ -234,6 +235,9 @@ class RangeCoder:
                 low &= 0xFFFFFFFF
                 high &= 0xFFFFFFFF
 
+            progress = bin(bw.string)
+            print(f"character {ch} encoded as {progress}")
+
         pending += 1
 
         if low < QUARTER:
@@ -246,7 +250,7 @@ class RangeCoder:
         return bw.get_bytes()
     
 
-    def decode(self, reader, max_symbols=10):
+    def decode(self, reader, max_symbols=200):
         print("symbol 0 is ", ord(self.symbols[0]))
         low = 0
         high = 0xFFFFFFFF
@@ -254,6 +258,8 @@ class RangeCoder:
         value = 0
         for _ in range(32):
             value = (value << 1) | reader.read_bit()
+
+        print("Initialisation complete, value is", value)
 
         out = []
 
@@ -312,7 +318,7 @@ class RangeCoder:
                 print("Reached EOF")
                 break
 
-            print("STEP", len(out), "prev:", prev, "ch:", ch, "ord:", ord(ch))
+            print("DEcoder STEP", len(out), "prev:", prev, "ch:", ch, "ord:", ord(ch))
 
             out.append(ch)
 
