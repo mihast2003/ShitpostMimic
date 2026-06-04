@@ -57,7 +57,7 @@ ref_text = " ".join(ref_text.splitlines())
 
 rangeCoder = RangeCoder(ref_text)
 
-input_text = "млкз"
+input_text = "текст понятный текст млк понятный текст понятный"
 # input_text = EOF * 10
 
 compressed = rangeCoder.encode(input_text)
@@ -70,6 +70,6 @@ for b in compressed:
 
 reader = BitReader(compressed)
 
-recovered = rangeCoder.decode(reader, 20)
+recovered = rangeCoder.decode(reader, 40)
 
 print(f"recovered message \"{recovered}\"")

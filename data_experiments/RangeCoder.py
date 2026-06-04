@@ -236,7 +236,15 @@ class RangeCoder:
                 high &= 0xFFFFFFFF
 
             progress = bin(bw.string)
-            print(f"character {ch} encoded as {progress}")
+            a = list(progress)
+            # Insert character at a specific position
+            a.insert(2, " ")
+            a.insert(11, " ")
+            a.insert(20, " ")
+            a.insert(29, " ")
+            a.insert(38, " ")
+            r1 = "".join(a)
+            print(f"character {ch} encoded as {r1}")
 
         pending += 1
 
