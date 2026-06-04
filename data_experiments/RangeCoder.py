@@ -183,10 +183,8 @@ class RangeCoder:
                 sym_low = self.bi_cum[prev][ch]
                 sym_high = sym_low + freq
 
-                if ch == "\x03":
-                    print("usin bi")
-                    print("ch is", ch)
-                    print(sym_low, sym_high)
+                print("usin bi")
+
 
             else:
                 total = self.uni_total
@@ -195,10 +193,8 @@ class RangeCoder:
 
                 sym_low = self.uni_cum[ch]
                 sym_high = sym_low + freq
-                if ch == "\x03":
-                    print("usin uni")
-                    print("ch is", ch)
-                    print(sym_low, sym_high)
+
+                print("usin uni")
 
             r = high - low + 1
 
@@ -280,6 +276,8 @@ class RangeCoder:
             # =========================
             use_bigram = prev is not None and self.bi_total.get(prev, 0) > 0
 
+            print(f"Chose {use_bigram} because for ch {prev} count is {self.bi_total.get(prev, 0)}")
+
             if use_bigram:
                 total_table = self.bi_total[prev]
                 cum_table = self.bi_cum[prev]
@@ -327,6 +325,8 @@ class RangeCoder:
                 break
 
             print("DEcoder STEP", len(out), "prev:", prev, "ch:", ch, "ord:", ord(ch))
+            mode = "BI" if use_bigram else "UNI"
+            print("Using ", mode)
 
             out.append(ch)
 
