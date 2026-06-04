@@ -175,7 +175,7 @@ class RangeCoder:
         for i, ch in enumerate(text):
             prev = text[i - 1] if i else None
 
-            if prev is not None and self.bi_counts[prev][ch] > 0:
+            if prev is not None and self.bi_counts[prev][ch] > 0:  # HERE IS NUMBA 1
                 total = self.bi_total[prev]
 
                 freq = self.bi_counts[prev][ch]
@@ -274,7 +274,7 @@ class RangeCoder:
             # =========================
             # SELECT MODEL
             # =========================
-            use_bigram = prev is not None and self.bi_total.get(prev, 0) > 0
+            use_bigram = prev is not None and self.bi_total.get(prev, 0) > 0 # HERE IS NUMBA 2
 
             print(f"Chose {use_bigram} because for ch {prev} count is {self.bi_total.get(prev, 0)}")
 
