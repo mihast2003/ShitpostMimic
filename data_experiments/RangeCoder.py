@@ -26,6 +26,28 @@ class BitWriter:
     def get_bytes(self):
         return bytes(self.out)
 
+class BitReader:
+    def __init__(self, data):
+        self.data = data
+        self.byte_pos = 0
+        self.bit_pos = 0  # 0–7
+
+    def read_bit(self):
+        if self.byte_pos >= len(self.data):
+            return 0  # or raise error if you prefer strict decoding
+
+        byte = self.data[self.byte_pos]
+
+        bit = (byte >> (7 - self.bit_pos)) & 1
+
+        self.bit_pos += 1
+
+        if self.bit_pos == 8:
+            self.bit_pos = 0
+            self.byte_pos += 1
+
+        return bit
+
 class EntropyAnalyser:
     def __init__(self) -> None:
         pass
@@ -117,6 +139,23 @@ class RangeCoder:
             for b in self.symbols:
                 self.bi_cum[a][b] = cum
                 cum += self.bi_counts[a][b]
+
+
+    def process_header(self, br):
+        first = br.read_bit()
+
+        if first == 0:
+            length = 0
+            for _ in range(4):
+                length = (length << 1) | br.read_bit()
+
+        elif br.read_bit() == 0:
+            length = 0
+            for _ in range(7):
+                length = (length << 1) | br.read_bit()
+
+        else:
+            use_EOF = True
 
 
     def change_blend_alpha(self, new_alpha):
@@ -246,13 +285,17 @@ class RangeCoder:
         return bw.get_bytes()
     
 
-    def decode(self, reader, max_symbols=200):
+    def decode(self, binary, max_symbols=200):
         low = 0
         high = 0xFFFFFFFF
 
+        br = BitReader(binary)
+
+        self.process_header(br)
+
         value = 0
         for _ in range(32):
-            value = (value << 1) | reader.read_bit()
+            value = (value << 1) | br.read_bit()
 
         # print("Initialisation complete, value is", value)
 
@@ -334,6 +377,6 @@ class RangeCoder:
 
                 low = (low << 1) & 0xFFFFFFFF
                 high = ((high << 1) | 1) & 0xFFFFFFFF
-                value = ((value << 1) | reader.read_bit()) & 0xFFFFFFFF
+                value = ((value << 1) | br.read_bit()) & 0xFFFFFFFF
 
         return ''.join(out)

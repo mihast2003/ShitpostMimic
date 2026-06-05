@@ -56,7 +56,7 @@ ref_text = " ".join(ref_text.splitlines())
 
 rangeCoder = RangeCoder(ref_text)
 
-input_text = "сообщение секретное че делаешь"
+input_text = "та найс согласен то происходит там вообще а"
 print(len(input_text))
 # input_text = EOF * 10
 
@@ -78,8 +78,7 @@ print(len(compressed) * 8, "bits")
 # for b in compressed:
 #     print(bin(b))
 
-reader = BitReader(compressed)
 
-recovered = rangeCoder.decode(reader, 100)
+recovered = rangeCoder.decode(compressed, 100)
 
 print(f"recovered message \"{recovered}\"")

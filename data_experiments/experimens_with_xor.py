@@ -15,7 +15,7 @@ laugh_decoded = laugh_encoder.decode(laugh_coded)
 decoded = huffman.decode(laugh_decoded)
 print(decoded)
 
-binary_string = "11111"
+binary_string = "111111"
 result = int(binary_string, 2)
 print(result)
 
