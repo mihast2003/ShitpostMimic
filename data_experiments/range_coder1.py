@@ -20,7 +20,6 @@ class BitReader:
             self.bit_pos = 0
             self.byte_pos += 1
 
-        print("Read bit:", bit)
         return bit
 
 ref_text = """вот я использую русский язык чтобы как дела привет я ни разу не использовал букву м например мороженое и можно пойти сделать что-то другое то у 
@@ -50,26 +49,37 @@ xd Я могу попробовать сделать более таймлапс
 Нужно увеличить какой-либо элемент, лиьо уменьшить, чтобы был контраст размеров. Например картинка очень большая а текст небольшой.
 Можно уменьшить текст " савиньон" и "белое сухое", а вот арман и тбд можно увеличить, для акцента на назвонии Товарищи зацените дизайн
 Это тестовое упаковка вина Первое премиальный классичесткий стиль, второе лаконичное современное Мне очень нравится концовка, и я пытаюсь понять почему не нравится начало
-Правое которое? Все прикольно выглядят, но левое верхнее плохо читается из за разрыва, а левое нижнее немного скушное(его можно улучшить, если увеличить фирменный знак - это если тебе понадобится строчный вариант). А так класстка побеждает. \x03
+Правое которое? Все прикольно выглядят, но левое верхнее плохо читается из за разрыва, а левое нижнее немного скушное(его можно улучшить, если увеличить фирменный знак - это если тебе понадобится строчный вариант). А так класстка побеждает.
 """
 ref_text = ref_text.lower()
 ref_text = " ".join(ref_text.splitlines())
 
 rangeCoder = RangeCoder(ref_text)
 
-input_text = "тек млм тек"
+input_text = "сообщение секретное че делаешь"
+print(len(input_text))
 # input_text = EOF * 10
+
+rangeCoder.change_blend_alpha(100)
 
 compressed = rangeCoder.encode(input_text)
 print(compressed)
 print(len(compressed) * 8, "bits")
 
-print("Binary is") 
-for b in compressed:
-    print(bin(b))
+# for i in [1, 4, 8, 16]:
+#     alpha = i
+#     rangeCoder.change_blend_alpha(alpha)
+#     compressed = rangeCoder.encode(input_text)
+#     # print(compressed)
+#     print("with alpha", alpha, "len ", len(compressed) * 8, "bits")
+
+
+# print("Binary is") 
+# for b in compressed:
+#     print(bin(b))
 
 reader = BitReader(compressed)
 
-recovered = rangeCoder.decode(reader, 12)
+recovered = rangeCoder.decode(reader, 100)
 
 print(f"recovered message \"{recovered}\"")

@@ -67,17 +67,17 @@ class EntropyAnalyser:
 
 class RangeCoder:
     def __init__(self, txt):
-        EOF = "\x03"
-        text = txt + EOF
+        EOF = " \x03"
+        text = txt + EOF * 20
         self.symbols = sorted(set(text))
+
+        self.alpha = 4  # coefficient used for blending between bigram and unigram
 
         # =====================================================
         # 1. UNIGRAM COUNTS (ground truth)
         # =====================================================
         self.uni_counts = Counter(text)
         self.uni_total = sum(self.uni_counts.values())
-
-
 
         # unigram cumulative (for range coding)
         self.uni_cum = {}
@@ -118,29 +118,37 @@ class RangeCoder:
                 self.bi_cum[a][b] = cum
                 cum += self.bi_counts[a][b]
 
-        # =====================================================
-        # 5. ESCAPE MODEL (simple, stable version)
-        # =====================================================
-        self.escape = {
-            s: max(1, len(self.symbols) // 20)
-            for s in self.symbols
-        }
 
-        # print(self.uni_counts["\x03"])
-        print("EOF interval:", self.uni_cum["\x03"], self.uni_cum["\x03"] + self.uni_counts["\x03"])
-        print("space interval:", self.uni_cum[" "], self.uni_cum[" "] + self.uni_counts[" "])
-        # print(self.bi_counts["э"])
-        # print(self.bi_total)
-        # print("\x03" in self.symbols)
-        # print(self.uni_counts["\x03"]) 
-        # assert sorted(self.symbols) == self.symbols
-        # assert "\x03" in self.symbols
-        # assert self.uni_cum[self.symbols[0]] == 0
+    def change_blend_alpha(self, new_alpha):
+        self.alpha = new_alpha
+
+    def get_model(self, prev):
+        freq = {}
+        total = 0
+
+        context_count = self.bi_total.get(prev, 0)
+
+        for s in self.symbols:
+            f = (context_count * self.bi_counts[prev][s] * self.alpha + self.uni_counts[s])
+
+            freq[s] = f
+            total += f
+
+        cum = {}
+        running = 0
+
+        for s in self.symbols:
+            cum[s] = running
+            running += freq[s]
+
+        # print("freq: ", freq)
+        # print("cum: ", cum)
+        # print("total: ", total)
+
+        return freq, cum, total
 
     def encode(self, txt):
-        print("symbol 0 is ", ord(self.symbols[0]))
-
-        EOF = "\x03"
+        EOF = " \x03"
         text = txt + EOF
 
         print("Text to encode", text)
@@ -150,7 +158,7 @@ class RangeCoder:
         ea = EntropyAnalyser()
         uni_entropy = ea.entropy_unigram(text, self.uni_counts, self.uni_total)
         bi_entropy = ea.entropy_bigram(text, self.bi_counts, self.bi_total)
-        print(f"Estimated entropy:\n Unigram: {uni_entropy}, Bigram: {bi_entropy}")
+        print(f"Estimated entropy:\n   Unigram: {uni_entropy}, Bit count: {len(text)*uni_entropy}\n   Bigram: {bi_entropy} Bit count: {len(text)*bi_entropy}")
 
         low = 0
         high = 0xFFFFFFFF
@@ -175,30 +183,14 @@ class RangeCoder:
         for i, ch in enumerate(text):
             prev = text[i - 1] if i else None
 
-            if prev is not None and self.bi_counts[prev][ch] > 0:  # HERE IS NUMBA 1
-                total = self.bi_total[prev]
+            freq, cum, total = self.get_model(prev)
 
-                freq = self.bi_counts[prev][ch]
-
-                sym_low = self.bi_cum[prev][ch]
-                sym_high = sym_low + freq
-
-                print("usin bi")
-
-
-            else:
-                total = self.uni_total
-
-                freq = self.uni_counts[ch]
-
-                sym_low = self.uni_cum[ch]
-                sym_high = sym_low + freq
-
-                print("usin uni")
+            sym_low = cum[ch]
+            sym_high = sym_low + freq[ch]
 
             r = high - low + 1
 
-            print("encoder STEP", i, "prev:", prev, " CHARACTER:", ch, " ord:", ord(ch))
+            # print("encoder STEP", i, "prev:", prev, " CHARACTER:", ch, " ord:", ord(ch))
 
             high = low + (r * sym_high // total) - 1
             low = low + (r * sym_low // total)
@@ -255,7 +247,6 @@ class RangeCoder:
     
 
     def decode(self, reader, max_symbols=200):
-        print("symbol 0 is ", ord(self.symbols[0]))
         low = 0
         high = 0xFFFFFFFF
 
@@ -263,7 +254,7 @@ class RangeCoder:
         for _ in range(32):
             value = (value << 1) | reader.read_bit()
 
-        print("Initialisation complete, value is", value)
+        # print("Initialisation complete, value is", value)
 
         out = []
 
@@ -274,20 +265,7 @@ class RangeCoder:
             # =========================
             # SELECT MODEL
             # =========================
-            use_bigram = prev is not None and self.bi_total.get(prev, 0) > 0 # HERE IS NUMBA 2
-
-            print(f"Chose {use_bigram} because for ch {prev} count is {self.bi_total.get(prev, 0)}")
-
-            if use_bigram:
-                total_table = self.bi_total[prev]
-                cum_table = self.bi_cum[prev]
-                freq_table = self.bi_counts[prev]
-            else:
-                total_table = self.uni_total
-                cum_table = self.uni_cum
-                freq_table = self.uni_counts
-
-            total = total_table
+            freq_table, cum_table, total = self.get_model(prev)
 
             # =========================
             # FIND SYMBOL
@@ -324,20 +302,18 @@ class RangeCoder:
                 print("Reached EOF")
                 break
 
-            print("DEcoder STEP", len(out), "prev:", prev, "ch:", ch, "ord:", ord(ch))
-            mode = "BI" if use_bigram else "UNI"
-            print("Using ", mode)
+            # print("DEcoder STEP", len(out), "prev:", prev, "ch:", ch, "ord:", ord(ch))
 
             out.append(ch)
 
             # =========================
-            # UPDATE RANGE (SINGLE SOURCE OF TRUTH)
+            # UPDATE RANGE
             # =========================
             high = low + (r * sym_high) // total - 1
             low = low + (r * sym_low) // total
 
             # =========================
-            # RENORMALIZATION (SYMMETRIC)
+            # RENORMALIZATION
             # =========================
             while True:
                 if high < 0x80000000:
