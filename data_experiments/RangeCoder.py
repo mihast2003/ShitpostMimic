@@ -89,7 +89,7 @@ class EntropyAnalyser:
 
 class RangeCoder:
     def __init__(self, txt):
-        EOF = " \x03"
+        EOF = "\x03"
         text = txt + EOF * 20
         self.symbols = sorted(set(text))
 
@@ -140,8 +140,36 @@ class RangeCoder:
                 self.bi_cum[a][b] = cum
                 cum += self.bi_counts[a][b]
 
+    
+    def write_header(self, bw: BitWriter, message_length):
+        # short message
+        if message_length <= 15:
+            bw.write_bit(0)
 
-    def process_header(self, br):
+            for i in range(3, -1, -1):
+                bw.write_bit((message_length >> i) & 1)
+
+            return False  # use_EOF
+
+        # medium message
+        elif message_length <= 63:
+            bw.write_bit(1)
+            bw.write_bit(0)
+
+            for i in range(5, -1, -1):
+                bw.write_bit((message_length >> i) & 1)
+
+            return False  # use_EOF
+
+        # long message
+        else:
+            bw.write_bit(1)
+            bw.write_bit(1)
+
+            return True  # use_EOF
+
+
+    def read_header(self, br: BitReader):
         first = br.read_bit()
 
         if first == 0:
@@ -149,13 +177,18 @@ class RangeCoder:
             for _ in range(4):
                 length = (length << 1) | br.read_bit()
 
-        elif br.read_bit() == 0:
+            return length, False
+
+        second = br.read_bit()
+
+        if second == 0:
             length = 0
-            for _ in range(7):
+            for _ in range(6):
                 length = (length << 1) | br.read_bit()
 
-        else:
-            use_EOF = True
+            return length, False
+
+        return None, True
 
 
     def change_blend_alpha(self, new_alpha):
@@ -187,12 +220,18 @@ class RangeCoder:
         return freq, cum, total
 
     def encode(self, txt):
-        EOF = " \x03"
-        text = txt + EOF
+        bw = BitWriter()
+        text = txt
+
+        use_eof = self.write_header(bw, len(txt))
+
+        header = bin(bw.string)
+        print("header is", header)
+
+        if use_eof:
+            text += "\x03"
 
         print("Text to encode", text)
-
-        bw = BitWriter()
 
         ea = EntropyAnalyser()
         uni_entropy = ea.entropy_unigram(text, self.uni_counts, self.uni_total)
@@ -285,13 +324,13 @@ class RangeCoder:
         return bw.get_bytes()
     
 
-    def decode(self, binary, max_symbols=200):
+    def decode(self, binary):
         low = 0
         high = 0xFFFFFFFF
 
         br = BitReader(binary)
 
-        self.process_header(br)
+        length, use_eof = self.read_header(br)
 
         value = 0
         for _ in range(32):
@@ -300,6 +339,9 @@ class RangeCoder:
         # print("Initialisation complete, value is", value)
 
         out = []
+
+        max_symbols = 200 if use_eof else length
+        if not max_symbols: max_symbols = 200 # just so it shuts up
 
         for _ in range(max_symbols):
             r = high - low + 1

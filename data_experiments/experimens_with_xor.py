@@ -4,7 +4,7 @@ from run_length_encoder import Laugh_Encoder_RunLength
 huffman = Huffman(mode="rus", DEBUG=True)
 laugh_encoder = Laugh_Encoder_RunLength(DEBUG=True)
 
-input_text = "могу да"
+input_text = "привет как там твои дела что скажешь про эээ"
 # input_text = input_text * 10
 
 encoded = huffman.encode(input_text)
@@ -15,9 +15,9 @@ laugh_decoded = laugh_encoder.decode(laugh_coded)
 decoded = huffman.decode(laugh_decoded)
 print(decoded)
 
-binary_string = "111111"
-result = int(binary_string, 2)
-print(result)
+# binary_string = "111111"
+# result = int(binary_string, 2)
+# print(result)
 
 # laugh_decoded = laugh_encoder.decode(laugh_coded)
 # decoded = huffman.decode(laugh_decoded)
