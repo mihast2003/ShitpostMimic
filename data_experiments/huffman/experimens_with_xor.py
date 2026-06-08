@@ -4,7 +4,7 @@ from run_length_encoder import Laugh_Encoder_RunLength
 huffman = Huffman(mode="rus", DEBUG=True)
 laugh_encoder = Laugh_Encoder_RunLength(DEBUG=True)
 
-input_text = "привет как там твои дела что скажешь про эээ"
+input_text = "привет как ты?"
 # input_text = input_text * 10
 
 encoded = huffman.encode(input_text)
