@@ -12,13 +12,16 @@ import unicodedata
 # U+1F7E0 → U+1F7EB
 
 
-start = 0x1F6B0
-end = 0x1F7Ef
+start = 0x1F910
+end = 0x1F9FF
+
 
 for cp in range(start, end + 1):
     char = chr(cp)
     name = unicodedata.name(char, "UNKNOWN")
     code = hex(cp)
 
+    # if name != "UNKNOWN":
+    #     print(code, char, name)
     if name != "UNKNOWN":
-        print(code, char, name)
+        print(char, end="")
